@@ -14,5 +14,5 @@ harppi: include/harppi.h source/harppi.cpp
 	
 file_io: include/file_io.h source/file_io.cpp
 	mkdir -p obj
-	$(CXX) $(CXXFLAGS) $(CXXOPTS) -c -o obj/file_io.o source/file_io.o
+	$(CXX) $(CXXFLAGS) $(CXXOPTS) -c -o obj/file_io.o source/file_io.cpp
 	

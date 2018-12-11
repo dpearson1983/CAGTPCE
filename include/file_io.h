@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include <vector_tpyes.h>
+#include <vector_types.h>
 
 enum fileType{
     DR12,
