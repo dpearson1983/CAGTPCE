@@ -17,7 +17,7 @@ enum fileType{
 
 fileType set_fileType(std::string type);
 
-void read_file(std::string file, fileType type, std::vector<std::vector<float3>> &parts, float3 L, float R, 
+int read_file(std::string file, fileType type, std::vector<std::vector<float3>> &parts, float3 L, float R, 
                float3 r_min);
 
 void write_triangle_file(std::string file, std::vector<int> &DDD, std::vector<int> &DDR, std::vector<int> &DRR,

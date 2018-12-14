@@ -15,10 +15,10 @@ fileType set_fileType(std::string type) {
         return Patchy;
     } else if (type == "PatchyRan" || type == "patchyran") {
         return PatchyRan;
-    } else if (type == "LNKNLogs") {
-        return LNKNLogs;
-    } else if (type == "LNKNLogsRan") {
-        return LNKNLogsRan;
+    } else if (type == "LNKNLog") {
+        return LNKNLog;
+    } else if (type == "LNKNLogRan") {
+        return LNKNLogRan;
     } else if (type == "Gadget2") {
         return Gadget2;
     } else {
@@ -110,33 +110,35 @@ int read_Gadget2(std::string file, std::vector<std::vector<float3>> &parts, floa
 
 int read_file(std::string file, fileType type, std::vector<std::vector<float3>> &parts, float3 L, float R, 
                float3 r_min) {
+    int num = 0;
     switch (type) {
         case DR12:
-            int num = read_DR12(file, parts, L, R, r_min);
-            return num;
+            num = read_DR12(file, parts, L, R, r_min);
+            break;
         case DR12Ran:
-            int num = read_DR12Ran(file, parts, L, R, r_min);
-            return num;
+            num = read_DR12Ran(file, parts, L, R, r_min);
+            break;
         case Patchy:
-            int num = read_Patchy(file, parts, L, R, r_min);
-            return num;
+            num = read_Patchy(file, parts, L, R, r_min);
+            break;
         case PatchyRan:
-            int num = read_PatchyRan(file, parts, L, R, r_min);
-            return num;
+            num = read_PatchyRan(file, parts, L, R, r_min);
+            break;
         case LNKNLog:
-            int num = read_LNKNLog(file, parts, L, R, r_min);
-            return num;
-        case LNKNLogsRan:
-            int num = read_LNKNLogRan(file, parts, L, R, r_min);
-            return num;
+            num = read_LNKNLog(file, parts, L, R, r_min);
+            break;
+        case LNKNLogRan:
+            num = read_LNKNLogRan(file, parts, L, R, r_min);
+            break;
         case Gadget2:
-            int num = read_Gadget2(file, parts, L, R, r_min);
-            return num;
+            num = read_Gadget2(file, parts, L, R, r_min);
+            break;
         default:
             std::stringstream errMsg;
             errMsg << "Unsupported file type" << std::endl;
             throw std::runtime_error(errMsg.str());
-            
+    }
+    return num;
 }
 
 bool isTriangle(float r1, float r2, float r3) {
@@ -170,15 +172,15 @@ void write_triangle_file(std::string file, std::vector<int> &DDD, std::vector<in
     for (int i = 0; i < N_shells; ++i) {
         float r1 = (i + 0.5)*dr;
         for (int j = 0; j < N_shells; ++j) {
-            float r2 = (j + 0.5)*N_shells;
+            float r2 = (j + 0.5)*dr;
             for (int k = 0; k < N_shells; ++k) {
                 float r3 = (k + 0.5)*dr;
                 if (isTriangle(r1, r2, r3)) {
                     int index = k + N_shells*(j + N_shells*i);
                     if (RRR[index] != 0) {
-                        double result = (DDD[index] - 3.0*DDR[index] + 3.0*DRR[index] - RRR[index])/RRR[index];
+                        double result = ((double)DDD[index] - 3.0*double(DDR[index]) + 3.0*double(DRR[index]) - double(RRR[index]))/double(RRR[index]);
                         fout << r1 << " " << r2 << " " << r3 << " " << DDD[index] << " " << DDR[index] << " ";
-                        fout << DRR[index] << " " << RRR[indxe] << " " << result << "\n";
+                        fout << DRR[index] << " " << RRR[index] << " " << result << "\n";
                     }
                 }
             }
@@ -194,7 +196,7 @@ void write_2point_file(std::string file, std::vector<int> &DD, std::vector<int> 
     fout.precision(15);
     for (int i = 0; i < N_shells; ++i) {
         float r = (i + 0.5)*dr;
-        double result = (N_ran*DD[i])/(N_gal*DR[i]) - 1.0;
+        double result = (double(N_ran)*double(DD[i]))/(double(N_gal)*double(DR[i])) - 1.0;
         fout << r << " " << DD[i] << " " << DR[i] << " " << result << "\n";
     }
     fout.close();
