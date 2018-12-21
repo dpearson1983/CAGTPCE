@@ -121,7 +121,7 @@ __global__ void countTriangles(float3 *d_p1, float3 **d_p2, float3 **d_p3, int *
                     for (int j = 0; j < 27; ++j) {
                         float3 rShift3;
                         int4 index2 = get_index(ngp1, j, n, rShift3);
-                        if (abs(index.x - index2.x) < 2 && abs(index.y - index2.y) < 2 && abs(index.z - index2.z) < 2) {
+//                         if (abs(index.x - index2.x) < 2 && abs(index.y - index2.y) < 2 && abs(index.z - index2.z) < 2) {
                             int size3 = p3_sizes[index2.w];
                             for (int part3 = 0; part3 < size3; ++part3) {
                                 float3 r3 = d_p3[index2.w][part3];
@@ -135,7 +135,7 @@ __global__ void countTriangles(float3 *d_p1, float3 **d_p2, float3 **d_p3, int *
                                     atomicAdd(&d_triangles[shell], 1);
                                 }
                             }
-                        }
+//                         }
                     }
                 }
             }

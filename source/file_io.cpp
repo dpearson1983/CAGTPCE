@@ -66,9 +66,9 @@ int read_LNKNLog(std::string file, std::vector<std::vector<float3>> &parts, floa
         fin >> x >> y >> z >> vx >> vy >> vz >> b;
         if (!fin.eof()) {
             float3 part = {(float)x, (float)y, (float)z};
-            int i = x/R;
-            int j = y/R;
-            int k = z/R;
+            int i = part.x/R;
+            int j = part.y/R;
+            int k = part.z/R;
             int index = k + N.z*(j + N.y*i);
             parts[index].push_back(part);
             num++;
@@ -89,9 +89,9 @@ int read_LNKNLogRan(std::string file, std::vector<std::vector<float3>> &parts, f
         fin >> x >> y >> z;
         if (!fin.eof()) {
             float3 part{(float)x, (float)y, (float)z};
-            int i = x/R;
-            int j = y/R;
-            int k = z/R;
+            int i = part.x/R;
+            int j = part.y/R;
+            int k = part.z/R;
             int index = k + N.z*(j + N.y*i);
             parts[index].push_back(part);
             num++;
