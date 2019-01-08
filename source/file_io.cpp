@@ -19,6 +19,8 @@ fileType set_fileType(std::string type) {
         return LNKNLog;
     } else if (type == "LNKNLogRan") {
         return LNKNLogRan;
+    } else if (type == "LNKNLogRanBin") {
+        return LNKNLogRanBin;
     } else if (type == "Gadget2") {
         return Gadget2;
     } else {
@@ -88,7 +90,7 @@ int read_LNKNLogRan(std::string file, std::vector<std::vector<float3>> &parts, f
         double x, y, z;
         fin >> x >> y >> z;
         if (!fin.eof()) {
-            float3 part{(float)x, (float)y, (float)z};
+            float3 part = {(float)x, (float)y, (float)z};
             int i = part.x/R;
             int j = part.y/R;
             int k = part.z/R;
@@ -98,6 +100,26 @@ int read_LNKNLogRan(std::string file, std::vector<std::vector<float3>> &parts, f
         }
     }
     fin.close();
+    return num;
+}
+
+int read_LNKNLogRanBin(std::string file, std::vector<std::vector<float3>> &parts, float3 L, float R, 
+                       float3 r_min) {
+    int3 N = {int(L.x/R), int(L.y/R), int(L.z/R)};
+    parts.resize(N.x*N.y*N.z);
+    int num;
+    std::ifstream fin(file, std::ios::in|std::ios::binary);
+    fin.read((char *)&num, sizeof(int));
+    std::vector<float3> p(num);
+    fin.read((char *)p.data(), num*sizeof(float3));
+    for (int g = 0; g < p.size(); ++g) {
+        float3 part = {p[g].x, p[g].y, p[g].z};
+        int i = part.x/R;
+        int j = part.y/R;
+        int k = part.z/R;
+        int index = k + N.z*(j + N.y*i);
+        parts[index].push_back(part);
+    }
     return num;
 }
 
@@ -129,6 +151,9 @@ int read_file(std::string file, fileType type, std::vector<std::vector<float3>> 
             break;
         case LNKNLogRan:
             num = read_LNKNLogRan(file, parts, L, R, r_min);
+            break;
+        case LNKNLogRanBin:
+            num = read_LNKNLogRanBin(file, parts, L, R, r_min);
             break;
         case Gadget2:
             num = read_Gadget2(file, parts, L, R, r_min);
@@ -179,8 +204,9 @@ void write_triangle_file(std::string file, std::vector<int> &DDD, std::vector<in
                     int index = k + N_shells*(j + N_shells*i);
                     if (RRR[index] != 0) {
                         double result = ((double)DDD[index] - 3.0*double(DDR[index]) + 3.0*double(DRR[index]) - double(RRR[index]))/double(RRR[index]);
+                        double result2 = ((double)DDD[index] - 3.0*DDR[index] + 2.0*RRR[index])/((double)RRR[index]);
                         fout << r1 << " " << r2 << " " << r3 << " " << DDD[index] << " " << DDR[index] << " ";
-                        fout << DRR[index] << " " << RRR[index] << " " << result << "\n";
+                        fout << DRR[index] << " " << RRR[index] << " " << result << " " << result2 << "\n";
                     }
                 }
             }

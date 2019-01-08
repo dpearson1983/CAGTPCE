@@ -11,7 +11,8 @@ enum fileType{
     Patchy,
     PatchyRan,
     LNKNLog,
-    LNKNLogRan, 
+    LNKNLogRan,
+    LNKNLogRanBin,
     Gadget2
 };
 
