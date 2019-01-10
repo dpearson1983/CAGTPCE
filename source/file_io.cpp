@@ -215,6 +215,32 @@ void write_triangle_file(std::string file, std::vector<int> &DDD, std::vector<in
     fout.close();
 }
 
+void write_triangle_file(std::string file, std::vector<int> &DDD, std::vector<float> &DDR, 
+                         std::vector<int> &DRR, std::vector<int> &RRR, float R, int N_shells) {
+    double dr = R/N_shells;
+    std::ofstream fout(file);
+    fout.precision(15);
+    for (int i = 0; i < N_shells; ++i) {
+        float r1 = (i + 0.5)*dr;
+        for (int j = 0; j < N_shells; ++j) {
+            float r2 = (j + 0.5)*dr;
+            for (int k = 0; k < N_shells; ++k) {
+                float r3 = (k + 0.5)*dr;
+                if (isTriangle(r1, r2, r3)) {
+                    int index = k + N_shells*(j + N_shells*i);
+                    if (RRR[index] != 0) {
+                        double result = ((double)DDD[index] - 3.0*double(DDR[index]) + 3.0*double(DRR[index]) - double(RRR[index]))/double(RRR[index]);
+                        double result2 = ((double)DDD[index] - 3.0*DDR[index] + 2.0*RRR[index])/((double)RRR[index]);
+                        fout << r1 << " " << r2 << " " << r3 << " " << DDD[index] << " " << DDR[index] << " ";
+                        fout << DRR[index] << " " << RRR[index] << " " << result << " " << result2 << "\n";
+                    }
+                }
+            }
+        }
+    }
+    fout.close();
+}
+
 void write_2point_file(std::string file, std::vector<int> &DD, std::vector<int> &DR, int N_gal, int N_ran, 
                        float R, int N_shells) {
     double dr = R/N_shells;

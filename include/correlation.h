@@ -15,6 +15,8 @@ __constant__ float d_R;
 __constant__ float3 d_L;
 __constant__ int d_Nshells;
 __constant__ int d_Nparts;
+__constant__ double d_wi[3];
+__constant__ double d_xi[3];
 
 __device__ __host__ void swapIfGreater(double &a, double &b) {
     if (a > b) {
@@ -43,7 +45,7 @@ __device__ __host__ double crossSectionVolume(double r1, double r2, double r3, d
     double V_io = sphereOverlapVolume(r1, r3 - 0.5*Delta_r, r2 + 0.5*Delta_r);
     double V_ii = sphereOverlapVolume(r1, r3 - 0.5*Delta_r, r2 - 0.5*Delta_r);
     
-    return r1*r1*(V_oo - V_oi - V_io + V_ii);
+    return V_oo - V_oi - V_io + V_ii;
 }
 
 __device__ __host__ int get_permutations(double r1, double r2, double r3) {
@@ -143,7 +145,17 @@ __global__ void countPairs(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_pa
     }
 }
 
-__global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_triangles, int3 n, double n_bar) {
+__device__ double gaussQuadCrossSectionDDR_GPU(double r1, double r2, double r3, double Delta_r) {
+    double result = 0.0;
+    for (int i = 0; i < 3; ++i) {
+        double r_1 = r1 + 0.5*Delta_r*d_xi[i];
+        result += 0.5*Delta_r*d_wi[i]*crossSectionVolume(r_1, r2, r3, Delta_r);
+    }
+    return result;
+}
+
+__global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, float *d_triangles, int3 n, 
+                       double n_bar) {
     // Calculate the thread ID for the current GPU thread
     int tid = threadIdx.x + blockIdx.x*blockDim.x;
     
@@ -157,20 +169,21 @@ __global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_triang
             int size2 = p2_sizes[index.w];
             for (int part2 = 0; part2 < size2; ++part2) {
                 float3 r2 = d_p2[index.w][part2];
-                r2.x = rShift2.x;
-                r2.y = rShift2.y;
-                r2.z = rShift2.z;
+                r2.x += rShift2.x;
+                r2.y += rShift2.y;
+                r2.z += rShift2.z;
                 float d1 = get_separation(r1, r2);
                 if (d1 < d_R && d1 > 0) {
                     int shell1 = int(d1*d_Nshells/d_R);
+                    float r_1 = (shell1 + 0.5)*Delta_r;
                     for (int shell2 = shell1; shell2 < d_Nshells; ++shell2) {
                         float d2 = (shell2 + 0.5)*d_R/d_Nshells;
                         for (int shell3 = shell2; shell3 < d_Nshells; ++shell3) {
                             float d3 = (shell3 + 0.5)*d_R/d_Nshells;
                             int shell = get_shell(d1, d2, d3);
-                            int n_perm = get_permutations((double)d1, (double)d2, (double)d3);
-                            int N_tri = int(n_perm*n_bar*crossSectionVolume((double)d1, (double)d2, (double)d3, 
-                                                                        Delta_r));
+                            int n_perm = get_permutations((double)r_1, (double)d2, (double)d3);
+                            float N_tri = n_perm*n_bar*gaussQuadCrossSectionDDR_GPU((double)d1, (double)d2,
+                                                                          (double)d3, Delta_r);
                             atomicAdd(&d_triangles[shell], N_tri);
                         }
                     }
@@ -222,10 +235,20 @@ __global__ void countTriangles(float3 *d_p1, float3 **d_p2, float3 **d_p3, int *
     }
 }
 
-double gaussQuadCrossSection(double r1, double r2, double r3, double Delta_r) {
+double gaussQuadCrossSectionRRR(double r1, double r2, double r3, double Delta_r) {
     double result = 0.0;
     for (int i = 0; i < 3; ++i) {
-        result += 0.5*Delta_r*w_i[i]*crossSectionVolume(r1 + 0.5*Delta_r*x_i[i], r2, r3, Delta_r);
+        double r_1 = r1 + 0.5*Delta_r*x_i[i];
+        result += 0.5*Delta_r*w_i[i]*crossSectionVolume(r_1, r2, r3, Delta_r)*r_1*r_1;
+    }
+    return result;
+}
+
+double gaussQuadCrossSectionDDR(double r1, double r2, double r3, double Delta_r) {
+    double result = 0.0;
+    for (int i = 0; i < 3; ++i) {
+        double r_1 = r1 + 0.5*Delta_r*x_i[i];
+        result += 0.5*Delta_r*w_i[i]*crossSectionVolume(r_1, r2, r3, Delta_r);
     }
     return result;
 }
@@ -242,10 +265,37 @@ std::vector<int> getRRR(double Delta_r, double n_bar, int N_parts, int N_shells)
                 double r3 = (k + 0.5)*Delta_r;
                 if (r3 <= r1 + r2) {
                     int index = k + N_shells*(j + N_shells*i);
-                    double V = gaussQuadCrossSection(r1, r2, r3, Delta_r);
+                    double V = gaussQuadCrossSectionRRR(r1, r2, r3, Delta_r);
                     int n_perm = get_permutations(r1, r2, r3);
                     N[index] = int(4.0*PI*n_perm*n_bar*n_bar*V*N_parts);
                     id++;
+                }
+            }
+        }
+    }
+    return N;
+}
+
+double sphericalShellVolume(double r, double dr) {
+    double r_o = r + 0.5*dr;
+    double r_i = r - 0.5*dr;
+    return 4.0*PI*(r_o*r_o*r_o - r_i*r_i*r_i);
+}
+
+std::vector<int> getDDR_CPU(std::vector<int> &DD, double Delta_r, double n_bar, int N_parts, int N_shells) {
+    std::vector<int> N(N_shells*N_shells*N_shells);
+    for (int i = 0; i < N_shells; ++i) {
+        double r1 = (i + 0.5)*Delta_r;
+        double n_bar1 = DD[i]/(N_parts*sphericalShellVolume(r1, Delta_r));
+        for (int j = i; j < N_shells; ++j) {
+            double r2 = (j + 0.5)*Delta_r;
+            for (int k = j; k < N_shells; ++k) {
+                double r3 = (k + 0.5)*Delta_r;
+                if (r3 <= r1 + r2) {
+                   int index = k + N_shells*(j + N_shells*i);
+                   double V = gaussQuadCrossSectionDDR(r1, r2, r3, Delta_r);
+                   int n_perm = get_permutations(r1, r2, r3);
+                   N[index] = int(n_perm*DD[i]*n_bar*V);
                 }
             }
         }
