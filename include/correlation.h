@@ -143,12 +143,12 @@ __global__ void countPairs(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_pa
     }
 }
 
-__global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_triangles, int3 n, double n_bar, 
-                       double Delta_r) {
+__global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_triangles, int3 n, double n_bar) {
     // Calculate the thread ID for the current GPU thread
     int tid = threadIdx.x + blockIdx.x*blockDim.x;
     
     if (tid < d_Nparts) {
+        double Delta_r = d_R/d_Nshells;
         float3 r1 = d_p1[tid];
         int4 ngp1 = {int(r1.x/d_R), int(r1.y/d_R), int(r1.z/d_R), 0};
         for (int i = 0; i < 27; ++i) {
@@ -169,8 +169,8 @@ __global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, int *d_triang
                             float d3 = (shell3 + 0.5)*d_R/d_Nshells;
                             int shell = get_shell(d1, d2, d3);
                             int n_perm = get_permutations((double)d1, (double)d2, (double)d3);
-                            int N_tri = n_perm*n_bar*crossSectionVolume((double)d1, (double)d2, (double)d3, 
-                                                                        Delta_r);
+                            int N_tri = int(n_perm*n_bar*crossSectionVolume((double)d1, (double)d2, (double)d3, 
+                                                                        Delta_r));
                             atomicAdd(&d_triangles[shell], N_tri);
                         }
                     }
@@ -231,12 +231,24 @@ double gaussQuadCrossSection(double r1, double r2, double r3, double Delta_r) {
 }
 
 // TODO: Modify to return full size array like others.
-std::vector<int> getRRR(std::vector<double3> &r, double Delta_r, double n_bar, int N_parts) {
-    std::vector<int> N;
-    for (int i = 0; i < r.size(); ++i) {
-        double V = gaussQuadCrossSection(r[i].x, r[i].y, r[i].z, Delta_r);
-        int n_perm = get_permutations(r[i].x, r[i].y, r[i].z);
-        N.push_back(int(4.0*PI*n_perm*n_bar*n_bar*V*N_parts));
+std::vector<int> getRRR(double Delta_r, double n_bar, int N_parts, int N_shells) {
+    std::vector<int> N(N_shells*N_shells*N_shells);
+    int id = 0;
+    for (int i = 0; i < N_shells; ++i) {
+        double r1 = (i + 0.5)*Delta_r;
+        for (int j = i; j < N_shells; ++j) {
+            double r2 = (j + 0.5)*Delta_r;
+            for (int k = j; k < N_shells; ++k) {
+                double r3 = (k + 0.5)*Delta_r;
+                if (r3 <= r1 + r2) {
+                    int index = k + N_shells*(j + N_shells*i);
+                    double V = gaussQuadCrossSection(r1, r2, r3, Delta_r);
+                    int n_perm = get_permutations(r1, r2, r3);
+                    N[index] = int(4.0*PI*n_perm*n_bar*n_bar*V*N_parts);
+                    id++;
+                }
+            }
+        }
     }
     return N;
 }
