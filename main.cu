@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
     cudaMemcpyToSymbol(d_R, &R, sizeof(float));
     cudaMemcpyToSymbol(d_L, &L, sizeof(float3));
     cudaMemcpyToSymbol(d_Nshells, &N_shells, sizeof(int));
-    cudaMemcpyToSymbol(d_wi, w_i.data(), w_i.size()*sizeof(double));
-    cudaMemcpyToSymbol(d_xi, x_i.data(), x_i.size()*sizeof(double));
+//     cudaMemcpyToSymbol(d_wi, w_i.data(), w_i.size()*sizeof(double));
+//     cudaMemcpyToSymbol(d_xi, x_i.data(), x_i.size()*sizeof(double));
     
     int3 N = {int(L.x/R), int(L.y/R), int(L.z/R)};
     float3 r_min = {(float)p.getd("r_minx"), (float)p.getd("r_miny"), (float)p.getd("r_minz")};
