@@ -333,8 +333,25 @@ std::vector<int> getDDR_CPU(std::vector<int> &DD, double Delta_r, double n_bar, 
                 if (r3 <= r1 + r2) {
                    int index = k + N_shells*(j + N_shells*i);
                    double V = gaussQuadCrossSectionDDR(DD, r1, r2, r3, Delta_r, N_parts);
-                   int n_perm = get_permutations(r1, r2, r3);
-                   N[index] = int(4.0*PI*n_perm*n_bar*V*N_parts);
+//                    int n_perm = get_permutations(r1, r2, r3);
+                   N[index] += int(4.0*PI*n_bar*V*N_parts);
+                   if (r1 != r2 && r1 != r3 && r2 != r3) {
+                       V = gaussQuadCrossSectionDDR(DD, r2, r3, r1, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       V = gaussQuadCrossSectionDDR(DD, r3, r1, r2, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       V = gaussQuadCrossSectionDDR(DD, r1, r3, r2, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       V = gaussQuadCrossSectionDDR(DD, r2, r1, r3, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       V = gaussQuadCrossSectionDDR(DD, r3, r2, r1, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                   } else if ((r1 == r2 && r1 != r3) || (r1 == r3 && r1 != r2) || (r2 == r3 && r2 != r1)) {
+                       V = gaussQuadCrossSectionDDR(DD, r2, r3, r1, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       V = gaussQuadCrossSectionDDR(DD, r3, r1, r2, Delta_r, N_parts);
+                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                   }
                 }
             }
         }

@@ -125,10 +125,10 @@ int main(int argc, char *argv[]) {
     cudaDeviceSynchronize();
     
     write_2point_file(p.gets("twoPointFile"), DD, DR, num_gals, num_rans, R, N_shells);
-    write_triangle_file(p.gets("threePointFile"), DDD, DDR, DRR, RRR, R, N_shells);
+    write_triangle_file(p.gets("threePointFile"), DDD, DDR, DRR, RRR, R, N_shells, num_gals, num_rans);
     
     num_blocks = num_gals/N_threads + 1;
-    double n_bar = double(num_gals)/(L.x*L.y*L.z);
+    double n_bar = double(num_rans)/(L.x*L.y*L.z);
     double Delta_r = R/N_shells;
     std::cout << n_bar << ", " << Delta_r << std::endl;
 //     getDDR<<<num_blocks, N_threads>>>(d_gs, d_gals, d_galSizes, d_DDRf, N, n_bar);
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     
     RRR = getRRR(Delta_r, n_bar, num_rans, N_shells);
     
-    write_triangle_file("predicted.dat", DDD, DDR, RRR, RRR, R, N_shells);
+    write_triangle_file("predicted.dat", DDD, DDR, RRR, RRR, R, N_shells, num_gals, num_rans);
     
     cudaFree(d_DD);
     cudaFree(d_DR);
