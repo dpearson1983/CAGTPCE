@@ -174,16 +174,18 @@ __global__ void getDDR(float3 *d_p1, float3 **d_p2, int *p2_sizes, float *d_tria
                 r2.z += rShift2.z;
                 float d1 = get_separation(r1, r2);
                 if (d1 < d_R && d1 > 0) {
-                    int shell1 = int(d1*d_Nshells/d_R);
-                    float r_1 = (shell1 + 0.5)*Delta_r;
-                    for (int shell2 = shell1; shell2 < d_Nshells; ++shell2) {
+//                     int shell1 = int(d1*d_Nshells/d_R);
+                    for (int shell2 = 0; shell2 < d_Nshells; ++shell2) {
                         float d2 = (shell2 + 0.5)*d_R/d_Nshells;
                         for (int shell3 = shell2; shell3 < d_Nshells; ++shell3) {
                             float d3 = (shell3 + 0.5)*d_R/d_Nshells;
                             int shell = get_shell(d1, d2, d3);
-                            int n_perm = get_permutations((double)r_1, (double)d2, (double)d3);
-                            float N_tri = n_perm*n_bar*gaussQuadCrossSectionDDR_GPU((double)d1, (double)d2,
+                            float N_tri = n_bar*crossSectionVolume((double)d1, (double)d2,
                                                                           (double)d3, Delta_r);
+                            if (d2 != d3) {
+                                N_tri += n_bar*crossSectionVolume((double)d1, (double)d3,
+                                                                          (double)d2, Delta_r);
+                            }
                             atomicAdd(&d_triangles[shell], N_tri);
                         }
                     }
@@ -253,32 +255,32 @@ double sphericalShellVolume(double r, double dr) {
 double nbarData(std::vector<int> &DD, double r, double r1, double Delta_r, int N_parts) {
     int bin = r/Delta_r;
     double nbar = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-    int num_bins = DD.size();
-    if (r <= (bin + 0.5)*Delta_r) {
-        if (bin != 0) {
-            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-            double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
-            double b = n1 - ((n1 - n2)/Delta_r)*r1;
-            nbar = ((n1 - n2)/Delta_r)*r + b;
-        } else {
-            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-            double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
-            double b = n1 - ((n2 - n1)/Delta_r)*r1;
-            nbar = ((n2 - n1)/Delta_r)*r + b;
-        }
-    } else {
-        if (bin != num_bins - 1) {
-            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-            double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
-            double b = n1 - ((n2 - n1)/Delta_r)*r1;
-            nbar = ((n2 - n1)/Delta_r)*r + b;
-        } else {
-            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-            double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
-            double b = n1 - ((n1 - n2)/Delta_r)*r1;
-            nbar = ((n1 - n2)/Delta_r)*r + b;
-        }
-    }
+//     int num_bins = DD.size();
+//     if (r <= (bin + 0.5)*Delta_r) {
+//         if (bin != 0) {
+//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+//             double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
+//             double b = n1 - ((n1 - n2)/Delta_r)*r1;
+//             nbar = ((n1 - n2)/Delta_r)*r + b;
+//         } else {
+//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+//             double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
+//             double b = n1 - ((n2 - n1)/Delta_r)*r1;
+//             nbar = ((n2 - n1)/Delta_r)*r + b;
+//         }
+//     } else {
+//         if (bin != num_bins - 1) {
+//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+//             double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
+//             double b = n1 - ((n2 - n1)/Delta_r)*r1;
+//             nbar = ((n2 - n1)/Delta_r)*r + b;
+//         } else {
+//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+//             double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
+//             double b = n1 - ((n1 - n2)/Delta_r)*r1;
+//             nbar = ((n1 - n2)/Delta_r)*r + b;
+//         }
+//     }
     return nbar;
 }
 
