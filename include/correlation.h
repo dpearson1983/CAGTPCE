@@ -255,32 +255,32 @@ double sphericalShellVolume(double r, double dr) {
 double nbarData(std::vector<int> &DD, double r, double r1, double Delta_r, int N_parts) {
     int bin = r/Delta_r;
     double nbar = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-//     int num_bins = DD.size();
-//     if (r <= (bin + 0.5)*Delta_r) {
-//         if (bin != 0) {
-//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-//             double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
-//             double b = n1 - ((n1 - n2)/Delta_r)*r1;
-//             nbar = ((n1 - n2)/Delta_r)*r + b;
-//         } else {
-//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-//             double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
-//             double b = n1 - ((n2 - n1)/Delta_r)*r1;
-//             nbar = ((n2 - n1)/Delta_r)*r + b;
-//         }
-//     } else {
-//         if (bin != num_bins - 1) {
-//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-//             double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
-//             double b = n1 - ((n2 - n1)/Delta_r)*r1;
-//             nbar = ((n2 - n1)/Delta_r)*r + b;
-//         } else {
-//             double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
-//             double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
-//             double b = n1 - ((n1 - n2)/Delta_r)*r1;
-//             nbar = ((n1 - n2)/Delta_r)*r + b;
-//         }
-//     }
+    int num_bins = DD.size();
+    if (r <= (bin + 0.5)*Delta_r) {
+        if (bin != 0) {
+            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+            double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
+            double b = n1 - ((n1 - n2)/Delta_r)*r1;
+            nbar = ((n1 - n2)/Delta_r)*r + b;
+        } else {
+            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+            double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
+            double b = n1 - ((n2 - n1)/Delta_r)*r1;
+            nbar = ((n2 - n1)/Delta_r)*r + b;
+        }
+    } else {
+        if (bin != num_bins - 1) {
+            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+            double n2 = DD[bin + 1]/(N_parts*sphericalShellVolume(r1 + Delta_r, Delta_r));
+            double b = n1 - ((n2 - n1)/Delta_r)*r1;
+            nbar = ((n2 - n1)/Delta_r)*r + b;
+        } else {
+            double n1 = DD[bin]/(N_parts*sphericalShellVolume(r1, Delta_r));
+            double n2 = DD[bin - 1]/(N_parts*sphericalShellVolume(r1 - Delta_r, Delta_r));
+            double b = n1 - ((n1 - n2)/Delta_r)*r1;
+            nbar = ((n1 - n2)/Delta_r)*r + b;
+        }
+    }
     return nbar;
 }
 
@@ -322,8 +322,31 @@ std::vector<int> getRRR(double Delta_r, double n_bar, int N_parts, int N_shells)
     return N;
 }
 
+std::vector<int> getDRR(double Delta_r, double n_bar, int N_parts, int N_shells) {
+    std::vector<int> N(N_shells*N_shells*N_shells);
+    int id = 0;
+    for (int i = 0; i < N_shells; ++i) {
+        double r1 = (i + 0.5)*Delta_r;
+        for (int j = i; j < N_shells; ++j) {
+            double r2 = (j + 0.5)*Delta_r;
+            for (int k = j; k < N_shells; ++k) {
+                double r3 = (k + 0.5)*Delta_r;
+                if (r3 <= r1 + r2) {
+                    int index = k + N_shells*(j + N_shells*i);
+                    double V = gaussQuadCrossSectionRRR(r1, r2, r3, Delta_r);
+                    int n_perm = get_permutations(r1, r2, r3);
+                    N[index] = int(4.0*PI*n_perm*n_bar*n_bar*V*N_parts);
+                    id++;
+                }
+            }
+        }
+    }
+    return N;
+}
+
 std::vector<int> getDDR_CPU(std::vector<int> &DD, double Delta_r, double n_bar, int N_parts, int N_shells) {
     std::vector<int> N(N_shells*N_shells*N_shells);
+    std::vector<double> N_temp(N_shells*N_shells*N_shells);
     std::remove("nbar.dat");
     for (int i = 0; i < N_shells; ++i) {
         double r1 = (i + 0.5)*Delta_r;
@@ -336,28 +359,30 @@ std::vector<int> getDDR_CPU(std::vector<int> &DD, double Delta_r, double n_bar, 
                    int index = k + N_shells*(j + N_shells*i);
                    double V = gaussQuadCrossSectionDDR(DD, r1, r2, r3, Delta_r, N_parts);
 //                    int n_perm = get_permutations(r1, r2, r3);
-                   N[index] += int(4.0*PI*n_bar*V*N_parts);
+                   N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                    if (r1 != r2 && r1 != r3 && r2 != r3) {
                        V = gaussQuadCrossSectionDDR(DD, r2, r3, r1, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                        V = gaussQuadCrossSectionDDR(DD, r3, r1, r2, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                        V = gaussQuadCrossSectionDDR(DD, r1, r3, r2, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                        V = gaussQuadCrossSectionDDR(DD, r2, r1, r3, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                        V = gaussQuadCrossSectionDDR(DD, r3, r2, r1, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                    } else if ((r1 == r2 && r1 != r3) || (r1 == r3 && r1 != r2) || (r2 == r3 && r2 != r1)) {
                        V = gaussQuadCrossSectionDDR(DD, r2, r3, r1, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                        V = gaussQuadCrossSectionDDR(DD, r3, r1, r2, Delta_r, N_parts);
-                       N[index] += int(4.0*PI*n_bar*V*N_parts);
+                       N_temp[index] += 4.0*PI*n_bar*V*N_parts;
                    }
                 }
             }
         }
     }
+    for (int i = 0; i < N.size(); ++i)
+        N[i] = int(N_temp[i]);
     return N;
 }
 

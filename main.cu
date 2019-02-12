@@ -17,6 +17,8 @@ int main(int argc, char *argv[]) {
     float R = (float)p.getd("R");
     int N_shells = p.geti("N_shells");
     
+    cudaSetDevice(p.geti("cudaDevice"));
+    
     std::vector<int3> shifts = get_shifts();
     
     cudaMemcpyToSymbol(d_shifts, shifts.data(), shifts.size()*sizeof(int3));
@@ -54,7 +56,7 @@ int main(int argc, char *argv[]) {
     float3 **d_gals, **d_rans;
     int *d_galSizes, *d_ranSizes;
     float3 *d_gs, *d_rs;
-    float *d_DDRf;
+//     float *d_DDRf;
     
     float3 **h_gals = (float3 **)malloc(gals.size()*sizeof(float3 *)); 
     float3 **h_rans = (float3 **)malloc(rans.size()*sizeof(float3 *));
@@ -79,7 +81,7 @@ int main(int argc, char *argv[]) {
     cudaMalloc((void **)&d_DR, DR.size()*sizeof(int));
     cudaMalloc((void **)&d_DDD, DDD.size()*sizeof(int));
     cudaMalloc((void **)&d_DDR, DDR.size()*sizeof(int));
-    cudaMalloc((void **)&d_DDRf, DDRf.size()*sizeof(float));
+//     cudaMalloc((void **)&d_DDRf, DDRf.size()*sizeof(float));
     cudaMalloc((void **)&d_DRR, DRR.size()*sizeof(int));
     cudaMalloc((void **)&d_RRR, RRR.size()*sizeof(int));
     cudaMalloc((void **)&d_galSizes, galSizes.size()*sizeof(int));
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
     cudaMemcpy(d_DR, DR.data(), DR.size()*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_DDD, DDD.data(), DDD.size()*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_DDR, DDR.data(), DDR.size()*sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_DDRf, DDRf.data(), DDRf.size()*sizeof(float), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_DDRf, DDRf.data(), DDRf.size()*sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_DRR, DRR.data(), DRR.size()*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_RRR, RRR.data(), RRR.size()*sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_galSizes, galSizes.data(), galSizes.size()*sizeof(int), cudaMemcpyHostToDevice);
@@ -131,15 +133,15 @@ int main(int argc, char *argv[]) {
     double n_bar = double(num_rans)/(L.x*L.y*L.z);
     double Delta_r = R/N_shells;
     std::cout << n_bar << ", " << Delta_r << std::endl;
-    getDDR<<<num_blocks, N_threads>>>(d_gs, d_gals, d_galSizes, d_DDRf, N, n_bar);
-    cudaMemcpy(DDRf.data(), d_DDRf, DDRf.size()*sizeof(float), cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
+//     getDDR<<<num_blocks, N_threads>>>(d_gs, d_gals, d_galSizes, d_DDRf, N, n_bar);
+//     cudaMemcpy(DDRf.data(), d_DDRf, DDRf.size()*sizeof(float), cudaMemcpyDeviceToHost);
+//     cudaDeviceSynchronize();
     DDR = getDDR_CPU(DD, Delta_r, n_bar, num_gals, N_shells);
     
     RRR = getRRR(Delta_r, n_bar, num_rans, N_shells);
     
     write_triangle_file("predictedCPU.dat", DDD, DDR, RRR, RRR, R, N_shells, num_gals, num_rans);
-    write_triangle_file("predictedGPU.dat", DDD, DDRf, RRR, RRR, R, N_shells, num_gals, num_rans);
+//     write_triangle_file("predictedGPU.dat", DDD, DDRf, RRR, RRR, R, N_shells, num_gals, num_rans);
     
     cudaFree(d_DD);
     cudaFree(d_DR);
@@ -153,7 +155,7 @@ int main(int argc, char *argv[]) {
     cudaFree(d_rans);
     cudaFree(d_gs);
     cudaFree(d_rs);
-    cudaFree(d_DDRf);
+//     cudaFree(d_DDRf);
     delete[] h_gals;
     delete[] h_rans;
     
